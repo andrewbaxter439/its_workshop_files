@@ -1,0 +1,246 @@
+---
+title: "Interrupted time series in R"
+output: html_notebook
+---
+
+# Using this notebook
+
+This workshop uses an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Within each `{r}` chunk, the R code will run when you press the 'play' button. This is the same R code you can use in any R session or script. Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+Once you have run all chunks, when you save the notebook, an HTML file containing the code and output will be saved alongside it. You can click *Preview* above to see the output as you edit and re-run, or *Knit to HTML* to run all chunks again and create an HTML output file.
+
+Load the required package `tidyverse` to get started:
+
+```{r setup}
+library(tidyverse)
+knitr::opts_chunk$set(messages = FALSE)
+```
+
+Throughout this file we'll be using the packages `dplyr` and `ggplot2` (included in `tidyverse`). Both of these have 'cheatsheets' if you're not familiar with them (available to download [here](https://github.com/rstudio/cheatsheets/raw/master/data-visualization.pdf) and [here](https://github.com/rstudio/cheatsheets/raw/master/data-transformation.pdf))
+
+# Interrupted Time Series Analysis - England's Teenage Pregnancy Strategy
+
+Interrupted time series analyses provide a method for evaluating the impact of an exposure on a measured outcome. They have the advantage that they compare before/after trends and therefore don't *need* a control group (but controls can be used for more robust comparisons - as we shall see). They can account for baseline trends and therefore control for some degree of secular change. One limitation is they are susceptible to other exposures producing spurious results, but controls can be used to overcome this.
+
+There are several ways of doing an ITS analysis. We'll choose a simple approach of a segmented regression model.
+
+More details on how this can be used can be found in these two papers:
+
+James Lopez Bernal, Steven Cummins, Antonio Gasparrini, Interrupted time series regression for the evaluation of public health interventions: a tutorial, International Journal of Epidemiology, Volume 46, Issue 1, February 2017, Pages 348–355, https://doi.org/10.1093/ije/dyw098
+
+James Lopez Bernal, Steven Cummins, Antonio Gasparrini, The use of controls in interrupted time series studies of public health interventions, International Journal of Epidemiology, Volume 47, Issue 6, December 2018, Pages 2082–2093, https://doi.org/10.1093/ije/dyy135
+
+## Introduction - The Teenage Pregnancy Strategy
+The Teenage Pregnancy Strategy (TPS) was launched in England in 1999 to address high rates of teenage pregnancy. A stated goal was a 50% reduction in under-18 pregnancy rates.
+
+## The data
+The main dataset we will use here is under-18 pregnancy rates in England from 1992 to 2016 (data available from [The Office for National Statisics](www.ons.gov.uk)). If the TPS had had an effect on teenage pregnancy rates, we would expect to see a change in this target population and outcome.
+
+## Load the data and have a look
+```{r load_england_data}
+england <- read_csv("data/England.csv")
+
+england
+```
+This includes the variables:
+
+ - `Country`: here only England data is included (to denote 'exposed' unit)
+ - `Year`: from earliest observation (1992) to latest (2016)
+ - `preg_rate`: rate of pregnancies to women aged under-18 per 1,000
+
+## Let's have a look at the data in a scatter plot
+```{r graph_rates}
+eng_plot <- england %>% 
+  ggplot(aes(x = Year, y = preg_rate, colour = Country)) +
+  geom_point() +
+  # Add in a line between 1998 and 1999 to mark Strategy launch
+  geom_vline(xintercept = 1998.5, linetype = "dashed") +
+  # Label to make axis clearer and include 0 in y axis range
+  ylab("Rate of pregnancies per 1,000 women aged under-18") +
+  ylim(0, NA)
+
+eng_plot
+```
+
+Your graph should look like [this](https://i.imgur.com/YS0Gxm0.png).
+<details><summary>View inline in rendered file</summary>![](https://i.imgur.com/YS0Gxm0.png)</details><br>
+
+
+>What do you notice about pregnancy rate trends before and after the 1999 Strategy launch?
+>Are these trends (roughly) linear?
+
+It seems that an interrupted time series model could work here to detect changes in pregnancy rates consistent with the launch of the strategy. I propose that a slope change at 1999 with a possible level change best represents the impact model seen here (see Lopez Bernal et al., 2017; Figure 2). Do you agree?
+
+
+## Fitting a linear model
+
+To test whether level or trend changes were seen at 1999 we fit a linear model with coefficients for:
+
+ - Baseline (pre-1992) pregnancy rate
+ - Pre-strategy trend change by year ('Time')
+ - Level change at strategy launch ('Level')
+ - Trend change from strategy launch ('Trend')
+ 
+This gives us the following equation:
+<!-- (hover over equation in RStudio to see formatted output) -->
+
+$Rate = \beta_0+\beta_1*Time+\beta_2*Level+\beta_3*Trend+\epsilon$
+
+To do this, we first need to create dummy variables for Time, Level and Trend:
+
+ - 'Time' should begin with 1 in 1992 and increment by 1 each year.
+ - 'Level' should be 0 before the strategy launch and 1 in all years after
+ - 'Trend' should begin with 1 in 1999 at strategy launch and increment by 1 each year
+ 
+Let's add these variables to a new dataframe for testing:
+
+```{r construct_test_df}
+england_its_data <- england %>% 
+  mutate(
+    Time = Year - 1991,
+    Level = ifelse(Year >= 1999, 1, 0),
+    Trend = ifelse(Year >= 1999, Year - 1998, 0)
+  )
+
+england_its_data
+```
+
+Your data now should look like [this](https://i.imgur.com/27dRAJ3.png). If not, what would you need to change to fix it?
+
+We can now fit a straightfoward linear model to our data using the `lm` function and the formula we derived above. This will attempt to test whether the coefficients represent significant level and trend changes at 1999.
+
+```{r england_mod}
+
+england_mod <- lm(preg_rate ~ Time + Level + Trend, data = england_its_data)
+
+summary(england_mod)
+
+```
+
+## Interpreting our model
+
+The estimates of our four coefficients are shown above. Let's interpret them according to our data.
+
+> In England in 1991 there were approximately ___ pregnancies per 1,000 women aged under-18
+
+(note that in making `Time` begin with 1 in 1992 we implicitely made 1991 our `Time = 0` baseline, rather than using `Year` directly and making 1 B.C.E. our basline!)
+
+> In 1999 at strategy launch England saw a change in yearly pregnancy rates of ___ [fewer/more] pregnancies per 1,000 women aged under-18. This was a [significant/non-significant] change in level (indepenent of trend changes).
+
+> From 1999 onwards, England saw [a decreasing/an increasing] trend of ___ [fewer/more] pregnancies per 1,000 women aged under-18 per year. This was a [significant/non-significant] change in trend.
+
+## Graphing our model
+
+```{r england_its_graph}
+
+eng_predict <- england_its_data %>% 
+  mutate(fitted = predict(england_mod))
+
+eng_predict_plot <- eng_plot + 
+  geom_line(data = eng_predict, aes(y = fitted, group = Level))
+
+eng_predict_plot
+
+```
+
+Your graph should look like [this](https://i.imgur.com/GbVbkKh.png).
+<details><summary>View inline in rendered file</summary>![](https://i.imgur.com/GbVbkKh.png)</details><br>
+
+We can add to this a line representing our hypothesised 'no strategy' (counterfactual) England - following the baseline trends beyond the 1999 strategy. We first create a dummy dataset, then apply the same model.
+
+```{r eng_its_graph_nos}
+
+england_counterfactual <- england_its_data %>% 
+  filter(Year >= 1999) %>% 
+  mutate(Country = "No strategy",
+         Level = 0,
+         Trend = 0) %>% 
+  mutate(fitted = predict(england_mod, newdata = .))
+
+eng_predict_plot +
+  geom_line(data = england_counterfactual, aes(y = fitted), linetype = "dashed")
+
+```
+Your graph should look like [this](https://i.imgur.com/uWF1ZXw.png).
+<details><summary>View inline in rendered file</summary>![](https://i.imgur.com/uWF1ZXw.png)</details><br>
+
+> If England had followed the 1991-1998 trend from 1999 onwards, what would have happened? Does it look like the Teenage Pregnancy Strategy was effective in lowering pregnancy rates?
+
+# Using controls in interrupted time series
+
+We'll now extend our model by adding a control. In some analyses controls might not be possible or necessary. See Lopez Bernal et al., (2018) for some things to think through.
+
+A key advantage of using a control is to adjust for other events and simultaneous interventions which might produce changes which _look_ like they're caused by the intervention, but would have happened anyway. In the case of teenage pregnancy in England, there could be quite a few other things affecting rates across the observation period. We could try adjusting for these using Scotland's rates as a control, as Scotland was not exposed to the same strategy as England.
+
+Let's import a dataset of Scotland's rates (from [ISD Scotland](https://www.isdscotland.org)) and compare:
+
+```{r scotland_import}
+
+scotland <- read_csv("data/Scotland.csv")
+
+scotland
+```
+
+These data are in the same format as England data above, so can be combined (with `Country` now able to distinguish the two countries as exposed/unexposed).
+
+Let's look at the yearly rates of both countries to see how they compare:
+
+```{r eng_scot_plot}
+
+eng_scot_rates <- bind_rows(england, scotland)
+
+# graph both countries together - hint: your code for your first scatter plot should work here!
+eng_scot_rates %>% 
+  ggplot(aes(x = Year, y = preg_rate, colour = Country)) +
+  geom_point() +
+  # Add in a line between 1998 and 1999 to mark Strategy launch
+  geom_vline(xintercept = 1998.5, linetype = "dashed") +
+  # Label to make axis clearer and include 0 in y axis range
+  ylab("Rate of pregnancies per 1,000 women aged under-18") +
+  ylim(0, NA)
+
+```
+
+>What changes do you see in (unexposed) Scotland? How does this compare with England?
+
+## Adding extra dummies and running controlled ITS model
+
+To run a controlled ITS analyses we need a few extra coefficients (in addition to those defined above):
+
+ - Difference in baseline level between countries ('Group')
+ - Difference in baseline trend between countries ('Group' * 'Time')
+ - Difference in level change at 1999 ('Group' * 'Level')
+ - Difference in trend change at 1999 ('Group' * 'Trend')
+
+These go in the following equation:
+
+$Rate = \beta_0+\beta_1*Time+\beta_2*Group+\beta_3*Group*Time+\beta_4*Level+\beta_5*Trend+\beta_6*Level*Group+\beta_7*Trend*Group+\epsilon$
+
+To do this we'll create the dummy variables in our joined dataset:
+
+ - 'Group' will be 1 for England and 0 for Scotland
+ - 'Group_time' will be a multiple of Group and Time - England will have an additional trend on top of the common 'Time' trend controlled for with Scotland
+ - 'Group_level' will be a multiple of Group and Level - again giving England an additional level change only associated with exposure to the strategy.
+ - 'Group_trend' as a multiple of Group and Trend - an additional trend change associated with exposure
+ 
+For the joined dataset we can now create a full dummy dataset:
+
+```{r eng_sco_its_data}
+
+eng_scot_its <- eng_scot_rates %>% 
+  mutate(
+        Time = Year - 1991,
+    Level = ifelse(Year >= 1999, 1, 0),
+    Trend = ifelse(Year >= 1999, Year - 1998, 0),
+    Group = ifelse(Country == "England", 1, 0),
+    Group_time = Group * Time,
+    Group_level = Group * Level,
+    Group_trend = Group * Trend
+  )
+
+eng_scot_its
+
+```
+
