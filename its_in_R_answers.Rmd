@@ -40,7 +40,7 @@ The main dataset we will use here is under-18 pregnancy rates in England from 19
 
 ## Load the data and have a look
 ```{r load_england_data}
-england <- read_csv(___) # Replace `___` with the path to `England.csv` (hint: in `data` folder)
+england <- read_csv("data/England.csv")
 
 england
 ```
@@ -53,12 +53,10 @@ This includes the variables:
 ## Let's have a look at the data in a scatter plot
 ```{r graph_rates}
 eng_plot <- england %>% 
-  ggplot(aes(x = ___, y = ___, colour = Country)) +
-  geom____() + # add scatter points
-  
+  ggplot(aes(x = Year, y = preg_rate, colour = Country)) +
+  geom_point() +
   # Add in a line between 1998 and 1999 to mark Strategy launch
   geom_vline(xintercept = 1998.5, linetype = "dashed") +
-  
   # Label to make axis clearer and include 0 in y axis range
   ylab("Rate of pregnancies per 1,000 women aged under-18") +
   ylim(0, NA)
@@ -101,9 +99,9 @@ Let's add these variables to a new dataframe for testing:
 ```{r construct_test_df}
 england_its_data <- england %>% 
   mutate(
-    Time = ___,
-    Level = ifelse(Year >= ___, ___, ___),
-    Trend = ifelse(Year >= ___, ___, ___)
+    Time = Year - 1991,
+    Level = ifelse(Year >= 1999, 1, 0),
+    Trend = ifelse(Year >= 1999, Year - 1998, 0)
   )
 
 england_its_data
@@ -116,7 +114,7 @@ We can now fit a straightfoward linear model to our data using the `lm` function
 
 ```{r england_mod}
 
-england_mod <- lm(preg_rate ~ Time + Level + Trend, data = ___)
+england_mod <- lm(preg_rate ~ Time + Level + Trend, data = england_its_data)
 
 summary(england_mod)
 
@@ -144,7 +142,7 @@ eng_predict <- england_its_data %>%
   mutate(fitted = predict(england_mod))
 
 eng_predict_plot <- eng_plot + 
-  geom_line(data = eng_predict, aes(y = ___, group = Level))
+  geom_line(data = eng_predict, aes(y = fitted, group = Level))
 
 eng_predict_plot
 
@@ -160,12 +158,12 @@ We can add to this a line representing our hypothesised 'no strategy' (counterfa
 england_counterfactual <- england_its_data %>% 
   filter(Year >= 1999) %>% 
   mutate(Country = "No strategy",
-         Level = ___,      # If England had not had a strategy, Level and Trend would have stayed at 0
-         Trend = ___) %>% 
+         Level = 0,
+         Trend = 0) %>% 
   mutate(fitted = predict(england_mod, newdata = .))
 
 eng_predict_plot +
-  geom_line(data = england_counterfactual, aes(y = ___), linetype = "dashed")
+  geom_line(data = england_counterfactual, aes(y = fitted), linetype = "dashed")
 
 ```
 
@@ -184,7 +182,7 @@ Let's import a dataset of Scotland's rates (from [ISD Scotland](https://www.isds
 
 ```{r scotland_import}
 
-scotland <- read_csv(___) # Read in 'Scotland.csv' (in `data` folder)
+scotland <- read_csv("data/Scotland.csv")
 
 scotland
 ```
@@ -199,9 +197,13 @@ eng_scot_rates <- bind_rows(england, scotland)
 
 # graph both countries together - hint: your code for your first scatter plot should work here!
 eng_scot_plot <- eng_scot_rates %>% 
-  ___ +
-  ___ +
-  ___ # etc.
+  ggplot(aes(x = Year, y = preg_rate, colour = Country)) +
+  geom_point() +
+  # Add in a line between 1998 and 1999 to mark Strategy launch
+  geom_vline(xintercept = 1998.5, linetype = "dashed") +
+  # Label to make axis clearer and include 0 in y axis range
+  ylab("Rate of pregnancies per 1,000 women aged under-18") +
+  ylim(0, NA)
 
 eng_scot_plot
 
@@ -236,15 +238,15 @@ For the joined dataset we can now create a full dummy dataset:
 
 ```{r eng_sco_its_data}
 
-eng_scot_its <- eng_scot_rates %>%
+eng_scot_its <- eng_scot_rates %>% 
   mutate(
-    Time = Year - 1991,
+        Time = Year - 1991,
     Level = ifelse(Year >= 1999, 1, 0),
     Trend = ifelse(Year >= 1999, Year - 1998, 0),
-    Group = ifelse(Country ==  ___, 1, 0),  # Set to 1 only for England
-    Group_time =  ___,
-    Group_level =  ___,
-    Group_trend =  ___
+    Group = ifelse(Country == "England", 1, 0),
+    Group_time = Group * Time,
+    Group_level = Group * Level,
+    Group_trend = Group * Trend
   )
 
 eng_scot_its
@@ -266,8 +268,6 @@ eng_scot_mod <-
 summary(eng_scot_mod)
 ```
 
-<sup>Side note - `lm` _can_ do interactions for us: `Group*Time` would automatically add the terms `Group + Time + Group:Time`, giving the interactions we need. However it's perhaps simpler to explicitly create the variables and pass them to the function ourselves, both to keep them in the order we specified them and to aid reading the output</sup>
-
 Now see what we can tell from our data.
 
 > In 1991 Scotland had an estimated ___ pregnancies per 1,000 women aged under 18, and England had ___ [more/fewer].
@@ -284,15 +284,11 @@ We can use our model to add prediction lines to both countries to see what the f
 
 ```{r eng_scot_its_graph}
 
-eng_scot_predict <- eng_scot_its %>%
-  mutate(fitted = predict(___)) # pass the new model output to the `predict` function
+eng_scot_predict <- eng_scot_its %>% 
+  mutate(fitted = predict(eng_scot_mod))
 
-eng_scot_predict_plot <- eng_scot_plot +
-  geom_line(data = eng_scot_predict, aes(
-    y =  ___,
-    group = interaction(Level, Country),  # These two lines make a break at 1999 and preserve colours according to country
-    colour = Country
-  ))
+eng_scot_predict_plot <- eng_scot_plot + 
+  geom_line(data = eng_scot_predict, aes(y = fitted, group = interaction(Level, Country), colour = Country))
 
 eng_scot_predict_plot
 
@@ -308,12 +304,12 @@ We can further add a predicted line for the proposed path England's rates would 
 eng_scot_counterfactual <- eng_scot_its %>%
   filter(Country == "England", Year >= 1999) %>%
   mutate(Country = "No strategy",
-         Group_level = ___,
-         Group_trend = ___) %>%  # In the absence of the strategy both of these terms would be ...?
-  mutate(fitted = predict(___, newdata = .))  # pass in new model
+         Group_level = 0,
+         Group_trend = 0) %>%
+  mutate(fitted = predict(eng_scot_mod, newdata = .))
 
 eng_scot_predict_plot +
-  geom_line(data = eng_scot_counterfactual, aes(y = ___), linetype = "dashed")
+  geom_line(data = eng_scot_counterfactual, aes(y = fitted), linetype = "dashed")
 
 ```
 
