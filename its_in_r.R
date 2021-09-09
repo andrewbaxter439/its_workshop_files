@@ -10,7 +10,7 @@ library(tidyverse)
 # When editing in the notebook itself, Shift+Click the links to follow them
 # 
 # 
-# # Interrupted Time Series Analysis - England's Teenage Pregnancy Strategy -----
+# Interrupted Time Series Analysis - England's Teenage Pregnancy Strategy -----
 # 
 # Interrupted time series (*ITS*) analyses provide a method for evaluating the
 # impact of an exposure on a measured outcome. They have the advantage that they
@@ -35,16 +35,17 @@ library(tidyverse)
 # Journal of Epidemiology, Volume 47, Issue 6, December 2018, Pages 2082–2093,
 # https://doi.org/10.1093/ije/dyy135
 #
-# ## Introduction - The Teenage Pregnancy Strategy The Teenage Pregnancy Strategy
-# (TPS) was launched in England in 1999 to address high rates of teenage
-# pregnancy. A stated goal was a 50% reduction in under-18 pregnancy rates.
+# Introduction - The Teenage Pregnancy Strategy --------------------------------
+# The Teenage Pregnancy Strategy (TPS) was launched in England in 1999 to
+# address high rates of teenage pregnancy. A stated goal was a 50% reduction in
+# under-18 pregnancy rates.
 # 
 # ## The data The main dataset we will use here is under-18 pregnancy rates in
 # England from 1992 to 2016 (data available from [The Office for National
 # Statisics](www.ons.gov.uk)). If the TPS had had an effect on teenage pregnancy
 # rates, we would expect to see a change in this target population and outcome.
 # 
-# ## Load the data and have a look
+## Load the data and have a look -----------------------------------------------
 # 
 # Within each R chunk, replace `___` with R code to produce the desired
 # outputs. R will alert you with any errors stopping the code from running
@@ -90,7 +91,7 @@ eng_plot
 # 2). Do you agree?
 # 
 # 
-# ## Fitting a linear model
+# ## Fitting a linear model ----------------------------------------------------
 # 
 # To test whether level or trend changes were seen at 1999 we fit a linear model
 # with coefficients for:
@@ -113,7 +114,7 @@ eng_plot
 # Let's add these variables to a new dataframe for testing:
 #
 ##
-#----construct_test_df----------------------------------------------------------------------------------------------------------------
+#----construct_test_df
 
 # The `ifelse(a, b, c)` function says "If 'a' is TRUE, return 'b', else return 'c'"
 # An example is given in setting Level: "If Year is 1999 or later, set Level = 1, else Level = 0"
@@ -171,7 +172,7 @@ summary(england_mod)
 # 
 # (note that this is relative to the baseline trend)
 # 
-# ## Graphing our model
+## Graphing our model ----------------------------------------------------------
 # 
 # We have fitted straight lines to our data. Now let's plot those lines over our
 # scatter point graph we made above to see how it fits.
@@ -220,7 +221,7 @@ eng_predict_plot +
 # have happened? Does it look like the Teenage Pregnancy Strategy was effective
 # in lowering pregnancy rates?
 #
-# # Using controls in interrupted time series ----------------------------------
+# Using controls in interrupted time series ----------------------------------
 #
 # We'll now extend our model by adding a control. In some analyses controls
 # might not be possible or necessary. See Lopez Bernal et al., (2018) for some
@@ -271,7 +272,7 @@ eng_scot_plot
 # > What changes do you see in (unexposed) Scotland? How does this compare with
 # England?
 #
-# ## Adding extra dummies and running controlled ITS model
+## Adding extra dummies and running controlled ITS model ---------------------
 #
 # To run a controlled ITS analyses we need a few extra coefficients (in addition
 # to those defined above):
@@ -338,6 +339,8 @@ summary(eng_scot_mod)
 # variables and pass them to the function ourselves, both to keep them in the
 # order we specified them and to aid reading the output**
 #
+## Interpreting our model ------------------------------------------------------
+#
 # Now see what we can tell from our data.
 #
 # > In 1991 Scotland had an estimated ___ pregnancies per 1,000 women aged under
@@ -358,7 +361,7 @@ summary(eng_scot_mod)
 # change was relative to baseline. In England's case the trend change was
 # relative to the trend change seen in Scotland).
 #
-# ## Graphing its model with comparators ---------------------------------------
+## Graphing its model with comparators -----------------------------------------
 #
 # We can use our model to add prediction lines to both countries to see what the
 # fitted models look like.
@@ -410,7 +413,7 @@ eng_scot_predict_plot +
 # > Are there potentially other UK-wide (or worldwide?) events which could have
 # contributed to falling rates, independent of the strategy?
 #
-# # Drawing conclusions
+# Drawing conclusions ----------------------------------------------------------
 #
 # You've hopefully now seen what can be tested using an interrupted time series
 # analysis, and the potential advantages of using a control. This is an
