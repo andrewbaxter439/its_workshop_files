@@ -366,6 +366,6 @@ You've hopefully now seen what can be tested using an interrupted time series an
 
 To cover the advanced aspects of this regression-based approach to interrupted time series analysis, I can recommend the course [Policy analysis using interrupted time series](https://www.edx.org/course/policy-analysis-using-interrupted-time-series), available for free on edx. This will cover the further elements of testing for and correcting for autocorrelation, as well as correcting for other things observed in the data.
 
-To explore the analyses we've just done here, and conduct a repeat comparison using Wales's rates as a control, I created a [Shiny app](https://phd.andybaxter.me/ITS_shinyapp/) which runs the same syntax on the same data in R, but with an interactive user interface. The fuller publication of this analysis can be found  [here](https://www.sciencedirect.com/science/article/pii/S0277953621000174) (including next week's subject of synthetic control analysis to approach the same problem).
+To explore the analyses we've just done here, and conduct a repeat comparison using Wales's rates as a control, I created a [Shiny app](https://phd.andybaxter.me/ITS_shinyapp/) which runs the same syntax on the same data in R, but with an interactive user interface. The fuller publication of this analysis can be found  [here](https://www.sciencedirect.com/science/article/pii/S0277953621000174).
 
-Get in touch through Classrooms if you have any questions! 
+Get in touch if you have any questions! 

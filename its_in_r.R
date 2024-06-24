@@ -454,8 +454,6 @@ eng_scot_predict_plot +
 # app](https://phd.andybaxter.me/ITS_shinyapp/) which runs the same syntax on
 # the same data in R, but with an interactive user interface. The fuller
 # publication of this analysis can be found
-# [here](https://www.sciencedirect.com/science/article/pii/S0277953621000174)
-# (including next week's subject of synthetic control analysis to approach the
-# same problem).
+# [here](https://www.sciencedirect.com/science/article/pii/S0277953621000174).
 #
-# Get in touch through Classrooms if you have any questions!
+# Get in touch if you have any questions!
